@@ -2,14 +2,12 @@ package domain
 
 import (
 	"database/sql"
-	"errors"
-	"log"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/joho/godotenv"
+	"github.com/manishdangi98/banking-lib/errs"
+	"github.com/manishdangi98/banking-lib/logger"
 )
 
 const TOKEN_DURATION = time.Hour
@@ -21,23 +19,20 @@ type Login struct {
 	Role       string         `db:"role"`
 }
 
-func (l Login) GenrateToken() (*string, error) {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error while loading .env for DB")
-	}
-	secret := os.Getenv("HMAC_SAMPLE_SECRET")
+func (l Login) GenrateToken() (*string, *errs.AppError) {
+
 	var claims jwt.MapClaims
 	if l.Accounts.Valid && l.CustomerId.Valid {
 		claims = l.claimsForUser()
 	} else {
 		claims = l.claimsForAdmin()
 	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
-	signedTokenAsString, err := token.SignedString([]byte(secret))
+	signedTokenAsString, err := token.SignedString([]byte(HMAC_SAMPLE_SECRET))
 	if err != nil {
-		log.Println("Failed while signing token:" + err.Error())
-		return nil, errors.New("cannot genrate token")
+		logger.Error("Failed while signing token:" + err.Error())
+		return nil, errs.NewUnexpectedError("cannot genrate token")
 	}
 	return &signedTokenAsString, nil
 

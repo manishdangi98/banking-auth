@@ -7,10 +7,11 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/manishdangi98/banking-auth/domain"
 	"github.com/manishdangi98/banking-auth/dto"
+	"github.com/manishdangi98/banking-lib/errs"
 )
 
 type AuthService interface {
-	Login(dto.LoginRequest) (*string, error)
+	Login(dto.LoginRequest) (*string, *errs.AppError)
 	Verify(urlParams map[string]string) (bool, error)
 }
 type DefaultAuthService struct {
@@ -18,7 +19,7 @@ type DefaultAuthService struct {
 	rolePermission domain.RolePermission
 }
 
-func (s DefaultAuthService) Login(req dto.LoginRequest) (*string, error) {
+func (s DefaultAuthService) Login(req dto.LoginRequest) (*string, *errs.AppError) {
 	login, err := s.repo.FindBy(req.Username, req.Password)
 	if err != nil {
 		return nil, err
@@ -56,20 +57,21 @@ func (s DefaultAuthService) Verify(urlParams map[string]string) (bool, error) {
 				return isAuthorized, nil
 			}
 		} else {
-			return false, errors.New("Invalid token")
+			return false, errors.New("invalid token")
 		}
 	}
 }
 func jwtTokenFromString(tokenString string) (*jwt.Token, error) {
-	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(domain.HMAC_SAMPLE_SECRET), nil
 	})
 	if err != nil {
-		log.Println("Error while parsing token:" + err.Error())
+		log.Println("Error while parsing token: " + err.Error())
+		return nil, err
 	}
 	return token, nil
 }
 
 func NewLoginService(repo domain.AuthRepository, permission domain.RolePermission) DefaultAuthService {
-	return DefaultAuthService{repo: repo, rolePermission: permission}
+	return DefaultAuthService{repo, permission}
 }

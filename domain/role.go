@@ -1,13 +1,15 @@
 package domain
 
-import "strings"
+import (
+	"strings"
+)
 
-type RolePermission struct {
-	rolePermission map[string][]string
+type RolePermissions struct {
+	rolePermissions map[string][]string
 }
 
-func (p RolePermission) IsAuthorizedFor(role string, routeName string) bool {
-	perms := p.rolePermission[role]
+func (p RolePermissions) IsAuthorizedFor(role string, routeName string) bool {
+	perms := p.rolePermissions[role]
 	for _, r := range perms {
 		if r == strings.TrimSpace(routeName) {
 			return true
@@ -16,13 +18,9 @@ func (p RolePermission) IsAuthorizedFor(role string, routeName string) bool {
 	return false
 }
 
-func GetRolePermissions() RolePermission {
-	return RolePermission{map[string][]string{
-		"admin": {
-			"GetAllCustomer", "GetCustomer", "NewAccount", "NewTransaction",
-		},
-		"user": {
-			"GetCustomer", "NewTransaction",
-		},
+func GetRolePermissions() RolePermissions {
+	return RolePermissions{map[string][]string{
+		"admin": {"GetAllCustomers", "GetCustomer", "NewAccount", "NewTransaction"},
+		"user":  {"GetCustomer", "NewTransaction"},
 	}}
 }

@@ -8,8 +8,6 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-const TOKEN_DURATION = time.Hour
-
 type Login struct {
 	Username   string         `db:"username"`
 	CustomerId sql.NullString `db:"customer_id"`
@@ -17,7 +15,7 @@ type Login struct {
 	Role       string         `db:"role"`
 }
 
-func (l Login) ClaimsForAccessToken() Claims {
+func (l Login) ClaimsForAccessToken() AccessTokenClaims {
 	if l.Accounts.Valid && l.CustomerId.Valid {
 		return l.claimsForUser()
 	} else {
@@ -25,25 +23,25 @@ func (l Login) ClaimsForAccessToken() Claims {
 	}
 }
 
-func (l Login) claimsForUser() Claims {
+func (l Login) claimsForUser() AccessTokenClaims {
 	accounts := strings.Split(l.Accounts.String, ",")
-	return Claims{
-		CustomerId: l.CustomerId,
+	return AccessTokenClaims{
+		CustomerId: l.CustomerId.String,
 		Accounts:   accounts,
 		Username:   l.Username,
 		Role:       l.Role,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(TOKEN_DURATION).Unix(),
+			ExpiresAt: time.Now().Add(ACCESS_TOKEN_DURATION).Unix(),
 		},
 	}
 }
 
-func (l Login) claimsForAdmin() Claims {
-	return Claims{
+func (l Login) claimsForAdmin() AccessTokenClaims {
+	return AccessTokenClaims{
 		Username: l.Username,
 		Role:     l.Role,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(TOKEN_DURATION).Unix(),
+			ExpiresAt: time.Now().Add(ACCESS_TOKEN_DURATION).Unix(),
 		},
 	}
 }

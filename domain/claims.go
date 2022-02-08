@@ -1,33 +1,45 @@
 package domain
 
 import (
+	"time"
+
 	"github.com/dgrijalva/jwt-go"
 )
 
 const HMAC_SAMPLE_SECRET = "hmacSampleSecret"
+const ACCESS_TOKEN_DURATION = time.Hour
+const REFRESH_TOKEN_DURATION = time.Hour * 24 * 30
 
-type Claims struct {
-	CustomerId string   `json:"customer_id"`
+type RefreshTokenClaims struct {
+	TokenType  string   `json:"token_type"`
+	CustomerId string   `json:"cid"`
 	Accounts   []string `json:"accounts"`
-	Username   string   `json:"username"`
-	Expiry     int64    `json:"exp"`
+	Username   string   `json:"un"`
 	Role       string   `json:"role"`
 	jwt.StandardClaims
 }
 
-func (c Claims) IsUserRole() bool {
+type AccessTokenClaims struct {
+	CustomerId string   `json:"customer_id"`
+	Accounts   []string `json:"accounts"`
+	Username   string   `json:"username"`
+	Role       string   `json:"role"`
+	jwt.StandardClaims
+}
+
+func (c AccessTokenClaims) IsUserRole() bool {
 	return c.Role == "user"
 }
 
-func (c Claims) IsValidCustomerId(customerId string) bool {
+func (c AccessTokenClaims) IsValidCustomerId(customerId string) bool {
 	return c.CustomerId == customerId
 }
 
-func (c Claims) IsValidAccountId(accountId string) bool {
+func (c AccessTokenClaims) IsValidAccountId(accountId string) bool {
 	if accountId != "" {
 		accountFound := false
-		for _, k := range c.Accounts {
-			if k == accountId {
+		for _, a := range c.Accounts {
+			if a == accountId {
 				accountFound = true
 				break
 			}
@@ -37,7 +49,7 @@ func (c Claims) IsValidAccountId(accountId string) bool {
 	return true
 }
 
-func (c Claims) IsRequestVerifiedWithTokenClaims(urlParams map[string]string) bool {
+func (c AccessTokenClaims) IsRequestVerifiedWithTokenClaims(urlParams map[string]string) bool {
 	if c.CustomerId != urlParams["customer_id"] {
 		return false
 	}
@@ -46,4 +58,29 @@ func (c Claims) IsRequestVerifiedWithTokenClaims(urlParams map[string]string) bo
 		return false
 	}
 	return true
+}
+
+func (c AccessTokenClaims) RefreshTokenClaims() RefreshTokenClaims {
+	return RefreshTokenClaims{
+		TokenType:  "refresh_token",
+		CustomerId: c.CustomerId,
+		Accounts:   c.Accounts,
+		Username:   c.Username,
+		Role:       c.Role,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(REFRESH_TOKEN_DURATION).Unix(),
+		},
+	}
+}
+
+func (c RefreshTokenClaims) AccessTokenClaims() AccessTokenClaims {
+	return AccessTokenClaims{
+		CustomerId: c.CustomerId,
+		Accounts:   c.Accounts,
+		Username:   c.Username,
+		Role:       c.Role,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(ACCESS_TOKEN_DURATION).Unix(),
+		},
+	}
 }
